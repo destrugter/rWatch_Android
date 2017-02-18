@@ -14,7 +14,7 @@ import android.telephony.SmsMessage;
 import android.util.Log;
 import android.widget.Toast;
 
-@TargetApi(21)
+@TargetApi(23)
 public class SMSBroadcastReceiver extends BroadcastReceiver {
 
     private static final String SMS_RECEIVED = "android.provider.Telephony.SMS_RECEIVED";
@@ -23,12 +23,16 @@ public class SMSBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.i(TAG, "Intent recieved: " + intent.getAction());
+        Log.i(TAG, "Context: " + context.toString());
+        //Toast.makeText(context, intent.getAction().toString(), Toast.LENGTH_LONG).show();
 
-        if (intent.getAction().equals(SMS_RECEIVED)) {
-            SmsMessage[] msgs = Telephony.Sms.Intents.getMessagesFromIntent(intent);
-            SmsMessage smsMessage = msgs[0];
+        SmsMessage[] msgs = Telephony.Sms.Intents.getMessagesFromIntent(intent);
+        SmsMessage smsMessage = msgs[0];
 
-            Toast.makeText(context, smsMessage.toString(), Toast.LENGTH_LONG).show();
-        }
+        Intent i = new Intent("smsBroadcast");
+        i.putExtra("smsMessageBody", smsMessage.getMessageBody());
+        i.putExtra("smsSender", smsMessage.getOriginatingAddress());
+
+        context.sendBroadcast(i);
     }
 }
