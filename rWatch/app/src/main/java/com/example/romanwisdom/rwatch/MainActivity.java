@@ -29,8 +29,9 @@ import org.w3c.dom.Text;
 import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
 import java.util.Set;
+import java.util.jar.Manifest;
 
-@TargetApi(21)
+@TargetApi(23)
 public class MainActivity extends AppCompatActivity{
 
     public final String TAG = "Main";
@@ -38,42 +39,79 @@ public class MainActivity extends AppCompatActivity{
     private Bluetooth bt;
     TextView status;
 
-    public static final int TRANSACTION_SET_TIME = 0;
-    public static final int TRANSACTION_SMS = 1;
+    public static final int TRANSACTION_SET_MONTH = 0;
+    public static final int TRANSACTION_SET_DAY = 1;
+    public static final int TRANSACTION_SET_YEAR = 2;
+    public static final int TRANSACTION_SET_DAYOFWEEK = 3;
+    public static final int TRANSACTION_SET_AMPM = 4;
+    public static final int TRANSACTION_SET_HOUR = 5;
+    public static final int TRANSACTION_SET_MINUTE = 6;
+    public static final int TRANSACTION_SET_SECOND = 7;
+    public static final int TRANSACTION_SET_BATTERY = 8;
+    public static final int TRANSACTION_SET_WEATHER = 9;
+    public static final int TRANSACTION_SEND_NOTIFICATION = 98;
+    public static final int TRANSACTION_SEND_SMS = 99;
+
+    // Bluetooth Connection Codes
+    public static final int BT_STATE_NONE = 0; // we're doing nothing
+    public static final int BT_STATE_LISTEN = 1; // now listening for incoming connections
+    public static final int BT_STATE_CONNECTING = 2; // now initiating an outgoing connection
+    public static final int BT_STATE_CONNECTED = 3; // now connected to a remote device
+
     public static final int SMS_RECEIVE_PERMISSION = 0;
+
+    private static MainActivity inst;
+
+    public static MainActivity instance(){
+        return inst;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ((TextView)findViewById(R.id.statusText)).setText("Not connected.");
+
+        handleSMSPermissions();
         setupBluetooth();
-        setupSmsPermissions();
+        //sendInitialData();
+
         registerReceiver(broadcastReceiver, new IntentFilter("smsBroadcast"));
+        registerReceiver(broadcastReceiver, new IntentFilter("notification"));
     }
 
     public void onBTSendMessageButtonTap(View v){
-        Calendar c = Calendar.getInstance();
+        ((TextView)findViewById(R.id.notificationTextView)).setText(Integer.toString(bt.getState()));
+    }
 
-        String dateTime = "0," +
-                String.valueOf(c.get(Calendar.MONTH)+1) + "," +
-                String.valueOf(c.get(Calendar.DAY_OF_MONTH)) + "," +
-                String.valueOf(c.get(Calendar.YEAR)) + "," +
-                String.valueOf(c.get(Calendar.DAY_OF_WEEK)) + "," +
-                String.valueOf(c.get(Calendar.AM_PM)) + "," +
-                String.valueOf(c.get(Calendar.HOUR)) + "," +
-                String.valueOf(c.get(Calendar.MINUTE)) + "," +
-                String.valueOf(c.get(Calendar.SECOND));
+    public void sendInitialData(){
+        if(bt.getState() == BT_STATE_CONNECTED) {
+            Calendar c = Calendar.getInstance();
+            String month = String.valueOf(c.get(Calendar.MONTH) + 1);
+            String dayOfMonth = String.valueOf(c.get(Calendar.DAY_OF_MONTH));
+            String year = String.valueOf(c.get(Calendar.YEAR));
+            String dayOfWeek = String.valueOf(c.get(Calendar.DAY_OF_WEEK));
+            String amPm = String.valueOf(c.get(Calendar.AM_PM));
+            String hour = String.valueOf(c.get(Calendar.HOUR));
+            String minute = String.valueOf(c.get(Calendar.MINUTE));
+            String second = String.valueOf(c.get(Calendar.SECOND));
+            String batLevel = Integer.toString(((BatteryManager) getSystemService(BATTERY_SERVICE)).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY));
 
-        bt.sendMessage(dateTime);
+            String initialData =
+                    TextUtils.join(",", new String[]{
+                            Integer.toString(TRANSACTION_SET_MONTH), Integer.toString(month.length()), month,
+                            Integer.toString(TRANSACTION_SET_DAY), Integer.toString(dayOfMonth.length()), dayOfMonth,
+                            Integer.toString(TRANSACTION_SET_YEAR), Integer.toString(year.length()), year,
+                            Integer.toString(TRANSACTION_SET_DAYOFWEEK), Integer.toString(dayOfWeek.length()), dayOfWeek,
+                            Integer.toString(TRANSACTION_SET_AMPM), Integer.toString(amPm.length()), amPm,
+                            Integer.toString(TRANSACTION_SET_HOUR), Integer.toString(hour.length()), hour,
+                            Integer.toString(TRANSACTION_SET_MINUTE), Integer.toString(minute.length()), minute,
+                            Integer.toString(TRANSACTION_SET_SECOND), Integer.toString(second.length()), second,
+                            Integer.toString(TRANSACTION_SET_BATTERY), Integer.toString(batLevel.length()), batLevel,
+                    });
 
-        SystemClock.sleep(2000);
-
-        BatteryManager bm = (BatteryManager)getSystemService(BATTERY_SERVICE);
-        int batLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-        ((TextView)findViewById(R.id.notificationTextView)).setText("1," + batLevel);
-
-        bt.sendMessage("1," + batLevel);
+            bt.sendMessage(initialData);
+        }
     }
 
     public void setupBluetooth() {
@@ -95,35 +133,6 @@ public class MainActivity extends AppCompatActivity{
         } catch(Exception e){
             Log.e(TAG, "Unable to start bt ",e);
             status.setText("Unable to connect " +e);
-        }
-    }
-
-    public void setupSmsPermissions() {
-        // Here, thisActivity is the current activity
-        if (ContextCompat.checkSelfPermission(this,
-                android.Manifest.permission.RECEIVE_SMS)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            // Should we show an explanation?
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                    android.Manifest.permission.RECEIVE_SMS)) {
-
-                // Show an explanation to the user *asynchronously* -- don't block
-                // this thread waiting for the user's response! After the user
-                // sees the explanation, try again to request the permission.
-
-            } else {
-
-                // No explanation needed, we can request the permission.
-
-                ActivityCompat.requestPermissions(this,
-                        new String[]{android.Manifest.permission.RECEIVE_SMS},
-                        SMS_RECEIVE_PERMISSION);
-
-                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
-                // app-defined int constant. The callback method gets the
-                // result of the request.
-            }
         }
     }
 
@@ -152,7 +161,7 @@ public class MainActivity extends AppCompatActivity{
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-    String permissions[], int[] grantResults) {
+                                           String permissions[], int[] grantResults) {
         switch (requestCode) {
             case SMS_RECEIVE_PERMISSION: {
                 // If request is cancelled, the result arrays are empty.
@@ -179,10 +188,64 @@ public class MainActivity extends AppCompatActivity{
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Bundle b = intent.getExtras();
-            String messageBody = b.getString("smsMessageBody");
-            String messageSender = b.getString("smsSender");
-            ((TextView)findViewById(R.id.notificationTextView)).setText(messageSender + " - " + messageBody);
+            if (bt.getState() == BT_STATE_CONNECTED) {
+                String btMessage = "";
+                //((TextView)findViewById(R.id.notificationTextView)).setText(intent.getAction());
+
+                if (intent.getAction().toString().equals("smsBroadcast")) {
+                    Bundle b = intent.getExtras();
+                    String messageBody = b.getString("smsMessageBody");
+                    String messageSender = b.getString("smsSender");
+                    String messageFull = messageSender + ":" + messageBody;
+
+                    btMessage = TextUtils.join(",", new String[]{
+                            Integer.toString(TRANSACTION_SEND_SMS), Integer.toString(messageFull.length()), messageFull
+                    });
+                } else if (intent.getAction().toString().equals("notification")) {
+                    Bundle b = intent.getExtras();
+
+                    if (!b.getString("package").equals("com.android.mms")) {
+                        String messageFull = b.getString("ticker");
+
+                        btMessage = TextUtils.join(",", new String[]{
+                                Integer.toString(TRANSACTION_SEND_NOTIFICATION), Integer.toString(messageFull.length()), messageFull
+                        });
+                    }
+
+                    if (btMessage != "") {
+                        bt.sendMessage(btMessage);
+                    }
+                }
+            }
         }
     };
+
+    public void handleSMSPermissions(){
+        // Here, thisActivity is the current activity
+        if (ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.RECEIVE_SMS)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    android.Manifest.permission.RECEIVE_SMS)) {
+
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+
+            } else {
+
+                // No explanation needed, we can request the permission.
+
+                ActivityCompat.requestPermissions(this,
+                        new String[]{android.Manifest.permission.RECEIVE_SMS},
+                        SMS_RECEIVE_PERMISSION);
+
+                // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                // app-defined int constant. The callback method gets the
+                // result of the request.
+            }
+        }
+    }
 }
