@@ -1,35 +1,26 @@
 package com.example.romanwisdom.rwatch;
 
 import android.annotation.TargetApi;
-import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.BatteryManager;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
-import android.os.SystemClock;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.telephony.SmsMessage;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import org.w3c.dom.Text;
-
-import java.nio.charset.StandardCharsets;
 import java.util.Calendar;
-import java.util.Set;
-import java.util.jar.Manifest;
 
 @TargetApi(23)
 public class MainActivity extends AppCompatActivity{
@@ -66,18 +57,18 @@ public class MainActivity extends AppCompatActivity{
         return inst;
     }
 
+    public static CountDownTimer countdownTimer;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ((TextView)findViewById(R.id.statusText)).setText("Not connected.");
 
         handleSMSPermissions();
         setupBluetooth();
+        setupTimers();
+        setupReceivers();
         //sendInitialData();
-
-        registerReceiver(broadcastReceiver, new IntentFilter("smsBroadcast"));
-        registerReceiver(broadcastReceiver, new IntentFilter("notification"));
     }
 
     public void onBTSendMessageButtonTap(View v){
@@ -136,12 +127,44 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
+    public void setupTimers(){
+        countdownTimer = new CountDownTimer(900000, 1000){
+            public void onTick(long millisecondsUntilFinished){
+                //Log.d(TAG, "Seconds left: " + millisecondsUntilFinished / 1000);
+            }
+
+            public void onFinish() {
+                Log.d(TAG, "Battery Level: " + Integer.toString(((BatteryManager) getSystemService(BATTERY_SERVICE)).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)));
+                //countdownTimer.start();
+            }
+        }.start();
+    }
+
+    public void setupReceivers(){
+        registerReceiver(broadcastReceiver, new IntentFilter("smsBroadcast"));
+        registerReceiver(broadcastReceiver, new IntentFilter("notification"));
+        registerReceiver(broadcastReceiver, new IntentFilter("bluetoothDisconnectedBroadcast"));
+    }
+
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case Bluetooth.MESSAGE_STATE_CHANGE:
                     Log.d(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
+                    TextView statusTextView = ((TextView) findViewById(R.id.statusText));
+
+                    switch(msg.arg1){
+                        case BT_STATE_LISTEN:
+                            statusTextView.setText("Disconnected");
+                            break;
+                        case BT_STATE_CONNECTING:
+                            statusTextView.setText("Connecting...");
+                            break;
+                        case BT_STATE_CONNECTED:
+                            statusTextView.setText("Connected");
+                            break;
+                    }
                     break;
                 case Bluetooth.MESSAGE_WRITE:
                     Log.d(TAG, "MESSAGE_WRITE ");
@@ -188,11 +211,11 @@ public class MainActivity extends AppCompatActivity{
     BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (bt.getState() == BT_STATE_CONNECTED) {
-                String btMessage = "";
-                //((TextView)findViewById(R.id.notificationTextView)).setText(intent.getAction());
+            String btMessage = "";
+            //((TextView)findViewById(R.id.notificationTextView)).setText(intent.getAction());
 
-                if (intent.getAction().toString().equals("smsBroadcast")) {
+            if (intent.getAction().toString().equals("smsBroadcast")) {
+                if (bt.getState() == BT_STATE_CONNECTED) {
                     Bundle b = intent.getExtras();
                     String messageBody = b.getString("smsMessageBody");
                     String messageSender = b.getString("smsSender");
@@ -201,7 +224,9 @@ public class MainActivity extends AppCompatActivity{
                     btMessage = TextUtils.join(",", new String[]{
                             Integer.toString(TRANSACTION_SEND_SMS), Integer.toString(messageFull.length()), messageFull
                     });
-                } else if (intent.getAction().toString().equals("notification")) {
+                }
+            } else if (intent.getAction().toString().equals("notification")) {
+                if (bt.getState() == BT_STATE_CONNECTED) {
                     Bundle b = intent.getExtras();
 
                     if (!b.getString("package").equals("com.android.mms")) {
@@ -211,11 +236,15 @@ public class MainActivity extends AppCompatActivity{
                                 Integer.toString(TRANSACTION_SEND_NOTIFICATION), Integer.toString(messageFull.length()), messageFull
                         });
                     }
-
-                    if (btMessage != "") {
-                        bt.sendMessage(btMessage);
-                    }
                 }
+            } else if (intent.getAction().toString().equals("bluetoothDisconnectedBroadcast")) {
+                ((TextView)findViewById(R.id.statusText)).setText("Disconnected");
+                //setupBluetooth();
+            }
+
+            if (btMessage != "") {
+                //bt.sendMessage(btMessage);
+                ((TextView)findViewById(R.id.notificationTextView)).setText(btMessage);
             }
         }
     };
@@ -246,6 +275,12 @@ public class MainActivity extends AppCompatActivity{
                 // app-defined int constant. The callback method gets the
                 // result of the request.
             }
+        }
+    }
+
+    public void btConnectButtonClick(){
+        if (bt.getState() == BT_STATE_LISTEN){
+            setupBluetooth();
         }
     }
 }
