@@ -1,12 +1,14 @@
 package com.example.romanwisdom.rwatch;
 
 import android.annotation.TargetApi;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.os.AsyncTask;
 import android.os.BatteryManager;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -20,6 +22,19 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Calendar;
 
 @TargetApi(23)
@@ -51,6 +66,8 @@ public class MainActivity extends AppCompatActivity{
 
     public static final int SMS_RECEIVE_PERMISSION = 0;
 
+    public static final String openWeatherAPIKey = "5b8a9311100f44e3cb60588107c2c27b";
+
     private static MainActivity inst;
 
     public static MainActivity instance(){
@@ -58,6 +75,8 @@ public class MainActivity extends AppCompatActivity{
     }
 
     public static CountDownTimer countdownTimer;
+
+    ProgressDialog pd;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -135,6 +154,8 @@ public class MainActivity extends AppCompatActivity{
 
             public void onFinish() {
                 Log.d(TAG, "Battery Level: " + Integer.toString(((BatteryManager) getSystemService(BATTERY_SERVICE)).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)));
+                // getBattery()
+                // getWeather()
                 //countdownTimer.start();
             }
         }.start();
@@ -278,9 +299,104 @@ public class MainActivity extends AppCompatActivity{
         }
     }
 
-    public void btConnectButtonClick(){
+    public void onBTConnectButtonClick(View v){
+        Log.d(TAG, "Attetmpting to connect to watch via Bluetooth");
         if (bt.getState() == BT_STATE_LISTEN){
             setupBluetooth();
+        }
+    }
+
+    public void onWeatherButtonPress(View v){
+        getWeather();
+    }
+
+    public void getWeather(){
+        int zip = Integer.parseInt(((TextView)findViewById(R.id.zipForWeatherTextField)).getText().toString());
+
+        String openWeatherURL = "http://api.openweathermap.org/data/2.5/weather?zip=" + Integer.toString(zip) + ",us&units=imperial&appid=" + openWeatherAPIKey;
+
+        new JsonTask().execute(openWeatherURL);
+    }
+
+    private class JsonTask extends AsyncTask<String, String, String> {
+
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            pd = new ProgressDialog(MainActivity.this);
+            pd.setMessage("Please wait");
+            pd.setCancelable(false);
+            pd.show();
+        }
+
+        protected String doInBackground(String... params) {
+            HttpURLConnection connection = null;
+            BufferedReader reader = null;
+
+            try {
+                URL url = new URL(params[0]);
+                connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+
+
+                InputStream stream = connection.getInputStream();
+
+                reader = new BufferedReader(new InputStreamReader(stream));
+
+                StringBuffer buffer = new StringBuffer();
+                String line = "";
+
+                while ((line = reader.readLine()) != null) {
+                    buffer.append(line+"\n");
+                    Log.d("Response: ", "> " + line);   //here u ll get whole response...... :-)
+
+                }
+
+                return buffer.toString();
+
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+                try {
+                    if (reader != null) {
+                        reader.close();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            if (pd.isShowing()){
+                pd.dismiss();
+            }
+
+            try {
+                JSONObject jsonObject = new JSONObject(result);
+                JSONObject mainObject = jsonObject.getJSONObject("main");
+                String temp = mainObject.optString("temp");
+                String btMessage = TextUtils.join(",", new String[]{
+                        Integer.toString(TRANSACTION_SET_WEATHER), Integer.toString(temp.length()), temp
+                });
+
+                //Log.d(TAG, "Temp: " + temp);
+                bt.sendMessage(btMessage);
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            //Log.d(TAG, result);
+            //txtJson.setText(result);
         }
     }
 }

@@ -10,75 +10,103 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.example.romanwisdom.rwatch.MainActivity">
 
+    <TextView
+        android:text="Bluetooth Status:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView2"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="TextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/statusText"
+        android:layout_alignParentTop="true"
+        android:layout_toRightOf="@+id/textView2"
+        android:layout_toEndOf="@+id/textView2" />
+
     <Button
         android:text="Connect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+        android:id="@+id/btConnectButton"
+        android:onClick="onBTConnectButtonClick (MainActivity)"
+        android:layout_below="@+id/textView2"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:id="@+id/btConnectButton"
-        android:onClick="onBluetoothConnectButtonTap" />
+        android:layout_marginTop="20dp" />
 
     <Button
         android:text="Disconnect"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/btDisconnect"
-        android:layout_alignParentTop="true"
+        android:layout_marginRight="22dp"
+        android:layout_marginEnd="22dp"
+        android:layout_alignBaseline="@+id/btConnectButton"
+        android:layout_alignBottom="@+id/btConnectButton"
         android:layout_alignParentRight="true"
         android:layout_alignParentEnd="true" />
 
     <TextView
-        android:text="Status:"
+        android:text="TextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/btConnectButton"
+        android:id="@+id/textView3"
+        android:layout_alignParentBottom="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true"
-        android:layout_marginLeft="13dp"
-        android:layout_marginStart="13dp"
-        android:layout_marginTop="37dp"
-        android:id="@+id/textView2" />
+        android:layout_marginBottom="144dp" />
 
     <TextView
         android:text="TextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignTop="@+id/textView2"
-        android:layout_toRightOf="@+id/btConnectButton"
-        android:layout_toEndOf="@+id/btConnectButton"
-        android:id="@+id/statusText" />
+        android:id="@+id/notificationTextView"
+        android:layout_alignBaseline="@+id/textView3"
+        android:layout_alignBottom="@+id/textView3"
+        android:layout_toRightOf="@+id/textView3"
+        android:layout_toEndOf="@+id/textView3"
+        android:layout_marginLeft="19dp"
+        android:layout_marginStart="19dp" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="numberSigned"
+        android:ems="10"
+        android:layout_above="@+id/textView3"
+        android:layout_alignRight="@+id/btDisconnect"
+        android:layout_alignEnd="@+id/btDisconnect"
+        android:layout_marginBottom="39dp"
+        android:id="@+id/zipForWeatherTextField"
+        android:layout_toRightOf="@+id/notificationTextView"
+        android:layout_toEndOf="@+id/notificationTextView"
+        android:text="65806" />
+
+    <TextView
+        android:text="ZIP (for weather)"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/zipForWeatherTextField"
+        android:layout_marginBottom="10dp"
+        android:id="@+id/textView"
+        android:layout_toLeftOf="@+id/statusText"
+        android:layout_toStartOf="@+id/statusText" />
 
     <Button
-        android:text="Send Bluetooth Message"
+        android:text="Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/textView2"
-        android:layout_alignLeft="@+id/textView2"
-        android:layout_alignStart="@+id/textView2"
-        android:layout_marginTop="89dp"
-        android:id="@+id/btSendMessageButton"
-        android:onClick="onBTSendMessageButtonTap" />
-
-    <TextView
-        android:text="TextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/btSendMessageButton"
-        android:layout_alignLeft="@+id/btSendMessageButton"
-        android:layout_alignStart="@+id/btSendMessageButton"
-        android:layout_marginTop="69dp"
-        android:id="@+id/notificationTextView" />
-
-    <TextView
-        android:text="TextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/notificationTextView"
-        android:layout_alignRight="@+id/notificationTextView"
-        android:layout_alignEnd="@+id/notificationTextView"
-        android:layout_marginTop="25dp"
-        android:id="@+id/textView3" />
+        android:id="@+id/button"
+        android:layout_marginBottom="33dp"
+        android:layout_alignParentBottom="true"
+        android:layout_toStartOf="@+id/notificationTextView"
+        android:layout_alignRight="@+id/btConnectButton"
+        android:layout_alignEnd="@+id/btConnectButton"
+        android:onClick="onWeatherButtonPress" />
 
 </RelativeLayout>
